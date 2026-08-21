@@ -1,0 +1,327 @@
+# Auto-generated from template_base.yaml — do not edit directly.
+# Updated for Amazon Bedrock AgentCore Harness architecture
+
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Lambda functions and AgentCore Harness for the restaurant recommendation agent
+
+Resources:
+
+  # Role for Lambda functions to execute with basic permissions
+  # Unchanged from original template
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: restaurant-agentcore-harness-lambda-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  # ---------------------------------------------------------
+  # 1. Lambda Functions
+  # 
+  # Logic Unchanged
+  # convert return strutured JSON-RPC responses for AgentCore Harness
+  # ---------------------------------------------------------
+  GetCuisinesFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: get-cuisines
+      Runtime: python3.12
+      Handler: index.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        ZipFile: |
+          import json
+
+
+          RESTAURANTS = [
+              {"id": "r1", "name": "Trattoria Bella", "cuisine": "Italian",  "rating": 4.6},
+              {"id": "r2", "name": "Osteria Romana",  "cuisine": "Italian",  "rating": 4.4},
+              {"id": "r3", "name": "Sakura Garden",   "cuisine": "Japanese", "rating": 4.7},
+              {"id": "r4", "name": "Ramen Yuki",      "cuisine": "Japanese", "rating": 4.9},
+              {"id": "r5", "name": "El Mercado",      "cuisine": "Mexican",  "rating": 4.3},
+              {"id": "r6", "name": "Spice Route",     "cuisine": "Indian",   "rating": 4.6},
+              {"id": "r7", "name": "Le Bistro",       "cuisine": "French",   "rating": 4.8},
+              {"id": "r8", "name": "The Grill House", "cuisine": "American", "rating": 4.2},
+          ]
+
+
+          def lambda_handler(event, context):
+            cuisines = sorted(set(r["cuisine"] for r in RESTAURANTS))
+            result = {"cuisines": cuisines}
+
+            # Return MCP-compliant JSON-RPC response
+            return {
+                "jsonrpc": "2.0",
+                "id": event.get("id", "1"),
+                "result": {
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": json.dumps(result)
+                        }
+                    ],
+                    "isError": False
+                }
+            }
+
+  SearchRestaurantsFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: search-restaurants
+      Runtime: python3.12
+      Handler: index.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        ZipFile: |
+          import json
+
+          RESTAURANTS = [
+              {"id": "r1", "name": "Trattoria Bella", "cuisine": "Italian",  "rating": 4.6},
+              {"id": "r2", "name": "Osteria Romana",  "cuisine": "Italian",  "rating": 4.4},
+              {"id": "r3", "name": "Sakura Garden",   "cuisine": "Japanese", "rating": 4.7},
+              {"id": "r4", "name": "Ramen Yuki",      "cuisine": "Japanese", "rating": 4.9},
+              {"id": "r5", "name": "El Mercado",      "cuisine": "Mexican",  "rating": 4.3},
+              {"id": "r6", "name": "Spice Route",     "cuisine": "Indian",   "rating": 4.6},
+              {"id": "r7", "name": "Le Bistro",       "cuisine": "French",   "rating": 4.8},
+              {"id": "r8", "name": "The Grill House", "cuisine": "American", "rating": 4.2},
+          ]
+
+          def lambda_handler(event, context):
+              # 1. Parse MCP arguments
+              # MCP passes the inputs inside params.arguments
+              arguments = event.get("params", {}).get("arguments", {})
+              
+              # Fallback just in case AWS strips the MCP wrapper and sends direct arguments
+              if not arguments and "cuisine" in event:
+                  arguments = event
+                  
+              cuisine = arguments.get("cuisine", "").lower()
+
+              # 2. Execute business logic
+              if cuisine:
+                  restaurants = [r for r in RESTAURANTS if r["cuisine"].lower() == cuisine]
+                  if not restaurants:
+                      result = {"error": f"No {cuisine.title()} restaurants found."}
+                  else:
+                      result = {"restaurants": restaurants}
+              else:
+                  result = {"restaurants": RESTAURANTS}
+
+              # 3. Return MCP-compliant JSON-RPC response
+              return {
+                  "jsonrpc": "2.0",
+                  "id": event.get("id", "1"),
+                  "result": {
+                      "content": [
+                          {
+                              "type": "text",
+                              "text": json.dumps(result)
+                          }
+                      ],
+                      "isError": False
+                  }
+              }
+
+  GetAvailabilityFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: get-availability
+      Runtime: python3.12
+      Handler: index.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        ZipFile: |
+          import json
+
+
+          AVAILABILITY = {
+              "r1": True,
+              "r2": False,
+              "r3": True,
+              "r4": False,
+              "r5": True,
+              "r6": True,
+              "r7": False,
+              "r8": True,
+          }
+
+
+          def lambda_handler(event, context):
+            # Parse MCP arguments
+            arguments = event.get("params", {}).get("arguments", {})
+            
+            # Fallback in case the gateway passes raw arguments
+            if not arguments and "restaurant_id" in event:
+                arguments = event
+                
+            restaurant_id = arguments.get("restaurant_id", "")
+
+            available = AVAILABILITY.get(restaurant_id, False)
+            result = {
+                "restaurant_id": restaurant_id,
+                "available": available,
+            }
+
+            # Return MCP-compliant JSON-RPC response
+            return {
+                "jsonrpc": "2.0",
+                "id": event.get("id", "1"),
+                "result": {
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": json.dumps(result)
+                        }
+                    ],
+                    "isError": False
+                }
+            }
+
+  # ---------------------------------------------------------
+  # 2. AgentCore Resources
+  # ---------------------------------------------------------
+
+  
+  # 2.1 AgentCore Permissions (Updated Principal)
+  #
+  # Change the Principal to bedrock-agentcore.amazonaws.com for AgentCore Harness
+  # Principal: bedrock.amazonaws.com # original Classic Bedrock
+  # Principal: bedrock-agentcore.amazonaws.com  # AgentCore
+  
+  GetCuisinesPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt GetCuisinesFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: bedrock-agentcore.amazonaws.com  # changed to AgentCore
+
+  SearchRestaurantsPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt SearchRestaurantsFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: bedrock-agentcore.amazonaws.com  # changed to AgentCore
+
+  GetAvailabilityPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt GetAvailabilityFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: bedrock-agentcore.amazonaws.com  # changed to AgentCore
+
+  # 2.2 AgentCore IAM Role for Gateway
+  #
+  # The AgentCore Gateway needs an IAM Role to invoke the Lambda functions.
+
+  RestaurantAgentGatewayRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: bedrock-agentcore.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: RestaurantAgentGatewayLambdaInvokePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource:
+                  - !GetAtt GetCuisinesFunction.Arn
+                  - !GetAtt SearchRestaurantsFunction.Arn
+                  - !GetAtt GetAvailabilityFunction.Arn
+  
+  # 2.3 AgentCore Gateway and Targets
+
+  # The Gateway acts as the secure connectivity layer between the Harness and your tools
+  RestaurantAgentGateway:
+    Type: AWS::BedrockAgentCore::Gateway
+    Properties:
+      Name: restaurant-agent-gateway
+      Description: "Unified gateway routing for restaurant recommendation tools"
+      AuthorizerType: NONE
+      ProtocolType: MCP
+      RoleArn: !GetAtt RestaurantAgentGatewayRole.Arn
+
+  # Gateway Targets map your Lambda functions into the Gateway
+  GetCuisinesTarget:
+    Type: AWS::BedrockAgentCore::GatewayTarget
+    Properties:
+      Name: GetCuisinesTarget
+      GatewayIdentifier: !Ref RestaurantAgentGateway
+      CredentialProviderConfigurations:
+        - CredentialProviderType: GATEWAY_IAM_ROLE
+      TargetConfiguration:
+        Mcp:
+          Lambda:
+            LambdaArn: !GetAtt GetCuisinesFunction.Arn
+            ToolSchema:
+              InlinePayload:
+                - Name: get_cuisines
+                  Description: Return the cuisine types available at the restaurants.
+                  InputSchema:
+                    Type: object
+                    Properties: {}
+
+  SearchRestaurantsTarget:
+    Type: AWS::BedrockAgentCore::GatewayTarget
+    Properties:
+      Name: SearchRestaurantsTarget
+      GatewayIdentifier: !Ref RestaurantAgentGateway
+      CredentialProviderConfigurations:
+        - CredentialProviderType: GATEWAY_IAM_ROLE
+      TargetConfiguration:
+        Mcp:
+          Lambda:
+            LambdaArn: !GetAtt SearchRestaurantsFunction.Arn
+            ToolSchema:
+              InlinePayload:
+                - Name: search_restaurants
+                  Description: Search restaurants by cuisine, or return all restaurants.
+                  InputSchema:
+                    Type: object
+                    Properties:
+                      cuisine:
+                        Type: string
+                        Description: The cuisine type to search for.
+
+  GetAvailabilityTarget:
+    Type: AWS::BedrockAgentCore::GatewayTarget
+    Properties:
+      Name: GetAvailabilityTarget
+      GatewayIdentifier: !Ref RestaurantAgentGateway
+      CredentialProviderConfigurations:
+        - CredentialProviderType: GATEWAY_IAM_ROLE
+      TargetConfiguration:
+        Mcp:
+          Lambda:
+            LambdaArn: !GetAtt GetAvailabilityFunction.Arn
+            ToolSchema:
+              InlinePayload:
+                - Name: get_availability
+                  Description: Check whether a restaurant is available.
+                  InputSchema:
+                    Type: object
+                    Properties:
+                      restaurant_id:
+                        Type: string
+                        Description: The unique restaurant ID.
+                    Required:
+                      - restaurant_id
+
+Outputs:
+  AgentCoreGatewayArn:
+    Description: ARN of the connectivity Gateway
+    Value: !GetAtt RestaurantAgentGateway.GatewayArn
