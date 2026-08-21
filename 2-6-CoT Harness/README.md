@@ -1,10 +1,16 @@
 
 # Exercise Solution: Restaurant Recommendation Agent
 
+## A. Template
+The CloudFormation template converting from classing Agent to AgentCore Gateway [template](template.yaml)
 
-[CloudFormation converting to AgentCore Gateway](template.yaml)
+Open the file to review the changes for converting.
+
+## B. Deployment
 
 ### Deploy stack
+
+Run the command in terminal
 ```bash
 aws-agents git:(main) ✗ aws configure --profile udacity
 aws-agents git:(main) ✗ aws cloudformation deploy \    
@@ -14,6 +20,8 @@ aws-agents git:(main) ✗ aws cloudformation deploy \
   --region us-east-1 \
   --profile udacity
 ```
+The result is similar to the following image.
+![deployment command](assets/deploy_cmd.png)
 
 ###  Check the deployment status
 
