@@ -3,12 +3,20 @@
 {
 	"name": "Python 3",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"image": "mcr.microsoft.com/devcontainers/python:3-3.14-trixie",
+	// "image": "mcr.microsoft.com/devcontainers/python:3-3.14-trixie",
+	"build": {
+        "dockerfile": "Dockerfile"
+    },
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	"features": {
 		"ghcr.io/devcontainers/features/aws-cli:1": {
-			"version": "latest"
+			"version": "latest",
+			"installZsh": true,
+			"installTools": true
 		}
+		// "ghcr.io/devcontainers/features/node:1": {
+        //     "version": "lts"
+        // }
 	},
 	"mounts": [
 		{
@@ -16,11 +24,15 @@
 			"target": "/home/vscode/.aws",
 			"type": "bind"
 		}
-	]
+	],
+	// Sets the actual Docker container name
+	"runArgs": [
+		"--name", "aws-agentcore"
+	],
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
 	// Use 'postCreateCommand' to run commands after the container is created.
-	// "postCreateCommand": "pip3 install --user -r requirements.txt",
+	// "postCreateCommand": ""
 	// Configure tool-specific properties.
 	// "customizations": {},
 	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
