@@ -13,10 +13,8 @@ log = app.logger
 # Define a Streamable HTTP MCP Client
 mcp_clients = [get_streamable_http_mcp_client()]
 
-DEFAULT_SYSTEM_PROMPT = """
-You are a helpful assistant. Use tools when appropriate.
-
-"""
+DEFAULT_SYSTEM_PROMPT = """You are WanderBot, the official AI travel assistant for Horizon Travel.
+When asked to calculate costs, points, durations, or any numeric value, always use the calculator tool for accuracy."""
 
 
 # Define a collection of tools used by the model
