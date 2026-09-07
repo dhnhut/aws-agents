@@ -1,3 +1,4 @@
+import os
 from typing import Any
 from collections import OrderedDict
 from strands import Agent
@@ -7,6 +8,16 @@ from bedrock_agentcore.runtime import BedrockAgentCoreApp
 from model.load import load_model
 from mcp_client.client import get_streamable_http_mcp_client
 from tools import add_numbers, search_hotels, search_flights
+
+from memory import ShortTermMemoryHookProvider, MemoryClient
+
+REGION = "us-east-1"
+MEMORY_NAME = "WandeBot"
+# CDK grants every runtime readwrite access to every project memory and injects its id as
+# MEMORY_<NAME>_ID (see AgentCoreMemory.getEnvVarName in @aws/agentcore-cdk) — the runtime role
+# is never granted bedrock-agentcore:ListMemories, so discovering the id via list_memories()
+# fails with AccessDeniedException. Read the injected env var instead.
+MEMORY_ID_ENV_VAR = f"MEMORY_{MEMORY_NAME.upper()}_ID"
 
 app = BedrockAgentCoreApp()
 log = app.logger
@@ -46,7 +57,16 @@ def _make_conversation_manager():
 # between them or grow without limit. For durable history, attach a session manager.
 def agent_factory():
     cache = OrderedDict()
-    def get_or_create_agent(session_id):
+    memory_client = MemoryClient(region_name=REGION)
+    memory_id = os.environ.get(MEMORY_ID_ENV_VAR)
+    if not memory_id:
+        raise RuntimeError(
+            f"{MEMORY_ID_ENV_VAR} is not set; the '{MEMORY_NAME}' memory must be declared in "
+            "agentcore.json so CDK injects it (run `agentcore add memory --name "
+            f"{MEMORY_NAME}` and redeploy)"
+        )
+
+    def get_or_create_agent(session_id, actor_id):
         if session_id in cache:
             cache.move_to_end(session_id)
             return cache[session_id]
@@ -57,8 +77,8 @@ def agent_factory():
             system_prompt=DEFAULT_SYSTEM_PROMPT,
             tools=tools,
             conversation_manager=_make_conversation_manager(),
-            hooks=[
-            ],
+            hooks=[ShortTermMemoryHookProvider(memory_client, memory_id)],
+            state={"actor_id": actor_id, "session_id": session_id},
         )
         return cache[session_id]
     return get_or_create_agent
@@ -143,7 +163,8 @@ async def invoke(payload, context):
 
 
     session_id = getattr(context, 'session_id', 'default-session')
-    agent = get_or_create_agent(session_id)
+    actor_id = payload.get("actor_id") if isinstance(payload, dict) else None
+    agent = get_or_create_agent(session_id, actor_id or session_id)
 
     prompt = _extract_prompt(payload)
 

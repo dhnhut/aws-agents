@@ -14,9 +14,7 @@
 			"installZsh": true,
 			"installTools": true
 		}
-		// "ghcr.io/devcontainers/features/node:1": {
-        //     "version": "lts"
-        // }
+		// Node.js is installed in the Dockerfile via NodeSource (latest LTS)
 	},
 	"mounts": [
 		{

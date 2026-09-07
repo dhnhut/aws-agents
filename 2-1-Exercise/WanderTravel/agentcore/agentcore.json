@@ -18,7 +18,13 @@
       "protocol": "HTTP"
     }
   ],
-  "memories": [],
+  "memories": [
+    {
+      "name": "WandeBot",
+      "eventExpiryDuration": 30,
+      "strategies": []
+    }
+  ],
   "knowledgeBases": [],
   "credentials": [],
   "evaluators": [],

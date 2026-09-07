@@ -1,3 +1,23 @@
 {
-  "targets": {}
+  "targets": {
+    "default": {
+      "resources": {
+        "runtimes": {
+          "SupportBot": {
+            "runtimeId": "WanderTravel_SupportBot-mK264S5cYd",
+            "runtimeArn": "arn:aws:bedrock-agentcore:us-east-1:566068566473:runtime/WanderTravel_SupportBot-mK264S5cYd",
+            "roleArn": "arn:aws:iam::566068566473:role/AgentCore-WanderTravel-de-ApplicationAgentSupportBo-9aTHNyQjKMHA"
+          }
+        },
+        "memories": {
+          "WandeBot": {
+            "memoryId": "WanderTravel_WandeBot-9usSiw8xih",
+            "memoryArn": "arn:aws:bedrock-agentcore:us-east-1:566068566473:memory/WanderTravel_WandeBot-9usSiw8xih"
+          }
+        },
+        "stackName": "AgentCore-WanderTravel-default",
+        "deployHash": "73379881a1c00751"
+      }
+    }
+  }
 }
