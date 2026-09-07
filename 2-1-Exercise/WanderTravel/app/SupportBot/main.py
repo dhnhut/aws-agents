@@ -1,11 +1,12 @@
 from typing import Any
 from collections import OrderedDict
-from strands import Agent, tool
+from strands import Agent
 import asyncio
 from strands.agent.conversation_manager.null_conversation_manager import NullConversationManager
 from bedrock_agentcore.runtime import BedrockAgentCoreApp
 from model.load import load_model
 from mcp_client.client import get_streamable_http_mcp_client
+from tools import add_numbers, search_hotels, search_flights
 
 app = BedrockAgentCoreApp()
 log = app.logger
@@ -23,11 +24,9 @@ tools = []
 _INLINE_FUNCTION_NAMES = set()
 
 # Define a simple function tool
-@tool
-def add_numbers(a: int, b: int) -> int:
-    """Return the sum of two numbers"""
-    return a+b
 tools.append(add_numbers)
+tools.append(search_hotels)
+tools.append(search_flights)
 
 
 
