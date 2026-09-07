@@ -4,8 +4,10 @@ from collections import OrderedDict
 from strands import Agent
 import asyncio
 from strands.agent.conversation_manager.null_conversation_manager import NullConversationManager
+from strands.tools.mcp.mcp_client import MCPClient
 from bedrock_agentcore.runtime import BedrockAgentCoreApp
 from model.load import load_model
+from mcp.client.streamable_http import streamable_http_client
 from mcp_client.client import get_streamable_http_mcp_client
 from tools import add_numbers, search_hotels, search_flights
 
@@ -13,6 +15,8 @@ from memory import ShortTermMemoryHookProvider, MemoryClient
 
 REGION = "us-east-1"
 MEMORY_NAME = "WandeBot"
+GATEWAY_ENDPOINT = "https://wanderbot-gateway-9wroz0cv1h.gateway.bedrock-agentcore.us-east-1.amazonaws.com/mcp"
+
 # CDK grants every runtime readwrite access to every project memory and injects its id as
 # MEMORY_<NAME>_ID (see AgentCoreMemory.getEnvVarName in @aws/agentcore-cdk) — the runtime role
 # is never granted bedrock-agentcore:ListMemories, so discovering the id via list_memories()
@@ -25,8 +29,17 @@ log = app.logger
 # Define a Streamable HTTP MCP Client
 mcp_clients = [get_streamable_http_mcp_client()]
 
-DEFAULT_SYSTEM_PROMPT = """You are WanderBot, the official AI travel assistant for Horizon Travel.
-When asked to calculate costs, points, durations, or any numeric value, always use the calculator tool for accuracy."""
+DEFAULT_SYSTEM_PROMPT = """You are WanderBot, the AI travel assistant for Horizon Travel.
+
+All of your tools are provided dynamically through the AgentCore Gateway. Discover the available tools at runtime and use them to answer customer questions about bookings, travel plans, and account details.
+
+Guidelines:
+- Rely on the tools available to you through the Gateway — do not assume capabilities that aren't exposed as tools.
+- Choose the most relevant tool for each request and call it with the required parameters.
+- If a request needs information across multiple tools, call them in sequence and combine the results.
+- If no available tool can fulfil a request, say so clearly instead of guessing.
+- Ask clarifying questions when the user's request is ambiguous or missing required details.
+- Present results in a clear, concise, customer-friendly format."""
 
 
 # Define a collection of tools used by the model
@@ -35,11 +48,15 @@ tools = []
 _INLINE_FUNCTION_NAMES = set()
 
 # Define a simple function tool
-tools.append(add_numbers)
+# tools.append(add_numbers)
 tools.append(search_hotels)
 tools.append(search_flights)
 
+client = MCPClient(
+    lambda: streamable_http_client(url=GATEWAY_ENDPOINT)
+)
 
+tools.append(client)
 
 # Add MCP client to tools if available
 for mcp_client in mcp_clients:

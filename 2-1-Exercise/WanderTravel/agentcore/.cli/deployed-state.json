@@ -15,8 +15,22 @@
             "memoryArn": "arn:aws:bedrock-agentcore:us-east-1:566068566473:memory/WanderTravel_WandeBot-9usSiw8xih"
           }
         },
+        "mcp": {
+          "gateways": {
+            "wanderbot-gateway": {
+              "gatewayId": "wandertravel-wanderbot-gateway-rbwtoxwrce",
+              "gatewayArn": "arn:aws:bedrock-agentcore:us-east-1:566068566473:gateway/wandertravel-wanderbot-gateway-rbwtoxwrce",
+              "gatewayUrl": "https://wandertravel-wanderbot-gateway-rbwtoxwrce.gateway.bedrock-agentcore.us-east-1.amazonaws.com",
+              "targets": {
+                "get-booking-tools": {
+                  "targetId": "58AX1P6Z26"
+                }
+              }
+            }
+          }
+        },
         "stackName": "AgentCore-WanderTravel-default",
-        "deployHash": "73379881a1c00751"
+        "deployHash": "1522544293e71539"
       }
     }
   }
