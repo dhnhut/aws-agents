@@ -13,6 +13,9 @@ from tools import add_numbers, search_hotels, search_flights
 
 from memory import ShortTermMemoryHookProvider, MemoryClient
 
+# Provides a live web browser for the agent to use.
+from browser_tool import AsyncSafeAgentCoreBrowser
+
 REGION = "us-east-1"
 MEMORY_NAME = "WandeBot"
 GATEWAY_ENDPOINT = "https://wanderbot-gateway-9wroz0cv1h.gateway.bedrock-agentcore.us-east-1.amazonaws.com/mcp"
@@ -33,6 +36,21 @@ DEFAULT_SYSTEM_PROMPT = """You are WanderBot, the AI travel assistant for Horizo
 
 All of your tools are provided dynamically through the AgentCore Gateway. Discover the available tools at runtime and use them to answer customer questions about bookings, travel plans, and account details.
 
+You have access to a live web browser. Use it to look up destination information
+on Wikivoyage (en.wikivoyage.org) — a free, open travel guide.
+
+To browse, call the browser tool in this exact order:
+1. init_session with session_name "travel-lookup" (session names must be
+   lowercase letters, digits and hyphens only, and at least 10 characters)
+2. navigate to https://en.wikivoyage.org/wiki/<DestinationName>
+3. get_text with selector "#mw-content-text" to read the article body
+   (get_text always requires a CSS selector)
+4. close when you are finished
+
+Summarise what you find — highlights, neighbourhoods, practical tips — and always
+tell the customer the information came from Wikivoyage. Never invent place names or
+attractions: if the browser did not return the detail, say you could not find it.
+
 Guidelines:
 - Rely on the tools available to you through the Gateway — do not assume capabilities that aren't exposed as tools.
 - Choose the most relevant tool for each request and call it with the required parameters.
@@ -51,6 +69,11 @@ _INLINE_FUNCTION_NAMES = set()
 # tools.append(add_numbers)
 tools.append(search_hotels)
 tools.append(search_flights)
+
+# One shared browser for the process, driven on its own background event loop.
+# See browser_tool.py for why the stock AgentCoreBrowser cannot be used directly here.
+browser = AsyncSafeAgentCoreBrowser(session_timeout=600)
+tools.append(browser.browser)
 
 client = MCPClient(
     lambda: streamable_http_client(url=GATEWAY_ENDPOINT)
